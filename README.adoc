@@ -1,0 +1,289 @@
+:title: From Spring to Spring Boot
+:doctype: book
+:encoding: utf-8
+:lang: zh
+:toc: left
+:toclevels: 3
+:numbered:
+:stylesheet: asciidoctor.css
+:stylesdir: .
+:linkcss:
+:imagesdir: images
+
+# From Spring to Spring Boot
+
+Frank Chen <chenhm@gmail.com>
+
+这是关于spring核心功能的小指南，方便快速理解spring
+
+## spring context
+
+### 创建Container
+
+Spring核心是个ioc container，所有实现 `org.springframework.context.ApplicationContext` 接口的类都是spring提供的container，可以根据需要选择，常见的有
+
+1. `AnnotationConfigApplicationContext`
++
+根据扫描到的注解创建container, 充分利用注解的便利性
++
+```java
+@Configuration
+@ComponentScan({"com.chenhm"}) <3>
+@ImportXml("classpath:com/company/data-access-config.xml") <4>
+public class AppLocal {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(); <1>
+        ctx.getEnvironment().setActiveProfiles("local");
+        ctx.register(AppLocal.class);  <2>
+        ctx.refresh();
+        ctx.registerShutdownHook();
+    }
+    
+    @Bean
+    @Profile("local")
+    public DataSource local() {
+        return initDataSource();
+    }
+}
+```
+<1> 创建一个空的Container
+<2> 注入当前类，注意这是个 `@Configuration` 类
+<3> 扫描 `com.chenhm` 包查找 `@Component` 注解
+<4> 导入xml配置的bean
+
++
+使用上面配置类的DataSource：
++
+[source,java]
+----
+package com.chenhm;
+
+@Repository
+public class JdbcFooRepository implements FooRepository {
+
+    @Autowired
+    private DataSource dataSource;
+
+    // ...
+}
+----
+
+2. `ClassPathXmlApplicationContext`
++
+根据classpath中的xml配置文件创建container，配置繁琐，但更灵活。
++
+```java
+ApplicationContext ctx = new ClassPathXmlApplicationContext("applicationContext.xml");
+
+```
++
+下面这个xml配置与上面注解的方式是等效的
++
+[source,xml]
+----
+<context:annotation-config />
+<context:component-scan base-package="com.chenhm" />
+----
+
+
+3. `XmlWebApplicationContext`
++
+spring在web应用中的默认container，通常用下面的方式初始化
++
+[source,xml]
+----
+<context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>/WEB-INF/applicationContext*.xml</param-value>
+</context-param>
+
+<listener>
+   <listener-class>
+        org.springframework.web.context.ContextLoaderListener
+   </listener-class>
+</listener> 
+----
++
+或者
++
+```xml
+ <servlet>
+   <servlet-name>dispatcher</servlet-name>
+   <servlet-class>
+     org.springframework.web.servlet.DispatcherServlet
+   </servlet-class>
+   <init-param>
+     <param-name>contextConfigLocation</param-name>
+     <param-value>/WEB-INF/spring/dispatcher-config.xml</param-value>
+   </init-param>
+   <load-on-startup>1</load-on-startup>
+ </servlet>
+```
+
+### 常用配置
+
+#### ApplicationContextAware
+ 
+当Spring识别到ApplicationContextAware后，会将当前容器注入该对象，方便操作容器
+
+[source,java]
+----
+@Bean
+public class MyContext implements ApplicationContextAware {
+
+   private static ApplicationContext appContext;
+
+   @Override
+   public void setApplicationContext(ApplicationContext applicationContext)
+         throws BeansException {
+      appContext = applicationContext;
+   }
+
+   public static <T> T getBean(Class<T> clazz) {
+      return appContext.getBean(clazz);
+   }
+}
+----
+然后可以在任何位置访问
+[source,java]
+----
+MyClass myClass = MyContext.getBean(MyClass.class)
+----
+
+
+
+## spring aop
+
+### AOP概念
+
+IoC解决了对象依赖问题，AOP则可以处理代码的通用逻辑，大大简化编码。在AOP以前，我们通常使用模版类提供的回调接口或interceptor来实现，比如servlet filter接口。由于需要预先设计接口，这种方式并不灵活直观。AOP则可以运行时动态拦截代码，插入通用逻辑，提供了极高的便利。拦截代码主要依赖动态代理（仅针对接口）和字节码修改技术。另外我们也可以使用Load-time instrumentation和Compile-time instrumentation，但一个需要Java agent，使用起来不够方便，一个只能在Compile-time做，不够灵活，当然instrumentation也有优势，它可以脱离容器运行。
+
+Spring AOP 有几个核心概念：
+
+* __Join point__: 连接点，定义在哪里(哪些点)加入你的逻辑功能，对于Spring 
+
+* __Pointcut__: 切入点，即一组Join point，Spring默认使用AspectJ的表达式语法匹配
+
+* __Advice__: 通知，指拦截到jointpoint之后所要做的事情，Spring AOP中分为前置通知(Before advice)、后置通知(AfterreturningAdvice)、异常通知(ThrowAdvice)、最终通知(AfterThrowing)、环绕通知(AroundAdvice)。使用AspectJ annotation 参考 http://docs.spring.io/spring/docs/current/spring-framework-reference/html/aop.html
+
+* __Aspect__: 切面，Advice和Pointcut的组合，在Spring中也叫 __advisor__，参考下面的spring事务配置理解
++
+[source,xml]
+----
+<tx:advice id="txAdvice" transaction-manager="txManager">
+   <tx:attributes>
+      <tx:method name="get*" read-only="true"/>
+      <tx:method name="*"/>
+   </tx:attributes>
+</tx:advice>
+
+<aop:config>
+   <aop:pointcut id="userServicePointCut" expression="within(com.chenhm.dao.*)"/>
+   <aop:advisor advice-ref="txAdvice" pointcut-ref="userServicePointCut"/>
+</aop:config>
+----
+
+
+* __Introduction__: 引入，Introduction 可以在运行期给一个class增加新的接口并指定接口的实现，也可以添加方法或Field
+
+* __Target object__: 就是advised object，在spring中永远是代理对象
+
+* __AOP proxy__: JDK dynamic proxy 或 CGLIB proxy，用于实现 __Aspect__
+
+* __Weaving__: 织入，应用 __Aspect__ 创建 __advised object__ 的过程，可以在compile time (例如AspectJ compiler), load time 或 runtime。Sping 的 weaving 发生在 runtime.
+
+### 自定义切面
+
+除了上面xml方式配置切面外，Spring还使用aspectj注解创建切面，例子如下：
+[source,java]
+----
+@Aspect <1>
+@Component <2>
+public class LogAspect {
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Before("execution(public * org.springframework.data.rest.webmvc.RepositoryEntityController.get*(..)) && args(resourceInformation,..)") <3>
+    public void before(JoinPoint jp, RootResourceInformation resourceInformation) {
+        logger.info("before " + jp); <4>
+    }
+}
+----
+<1> 使用`@Aspect`注解标记切面类
+<2> `@Component`使spring在容器内创建该类，也可通过xml配置让spring感知此类
+<3> Pointcut声明，注意参数需要用args标记
+<4> JoinPoint可以获得当前方法和参数信息
+
+### 利用子定义注解创建切面
+Spring本身大量使用了自定义注解，大大方便了开发者，我们也可以定义自己的注解配合切面完成通用功能。下面是个记录日志的例子。
+
+.Annotation
+[source,java]
+----
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface AroundLog {
+    String level() default "info";
+}
+----
+
+.Advice method
+[source,java]
+----
+@Around("@annotation(aroundLog)") <1>
+public Object AroundLog(ProceedingJoinPoint jp, AroundLog aroundLog <2>
+            ) throws Throwable {
+    try {
+        log(logger, aroundLog.level(), "start " + jp );
+        return jp.proceed(); <3>
+    } finally {
+        log(logger, aroundLog.level(), "finished " + jp );
+    }
+}
+----
+<1> 匹配带有annotation的方法
+<2> 方法上的annotation类型是AroundLog
+<3> 原始方法
+
+.Call example
+[source,java]
+----
+@RestController
+@RequestMapping("/rest/")
+public class TodoController {
+    @AroundLog(level = "debug")
+    @RequestMapping(value = "todoes/{id}", produces = MediaType.APPLICATION_JSON_VALUE )
+    public Todo findOne(@PathVariable Long id){
+        return todoRepository.findOne(id);
+    }
+}
+----
+
+上面的代码我们先创建了名为 `AroundLog` 的注解类型，然后通过Pointcut表达式匹配，并定义了该切面的行为，最后在业务代码中通过 `@AroundLog(level = "debug")` 调用。Spring完成类型增强后生成的新代码大致伪码如下
+
+[source,java]
+----
+@RestController
+@RequestMapping("/rest/")
+public class TodoController$$FastClassBySpringCGLIB$$18a9e4f3 {
+    final TodoController todoController
+
+    @RequestMapping(value = "todoes/{id}", produces = MediaType.APPLICATION_JSON_VALUE )
+    public Todo findOne(@PathVariable Long id){
+        return AroundLog(() -> {
+            todoController.findOne(id)
+        }, aroundLog);
+    }
+}
+----
+
+## spring mvc
+
+TODO
+
+## spring tx
+
+TODO
+
+## spring boot
+
+TODO
