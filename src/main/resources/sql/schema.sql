@@ -4,6 +4,5 @@ create table Todo (
 	complete boolean
 );
 
-insert into Todo (description, complete) values ('A', false);
-insert into Todo (description, complete) values ('B', false);
-insert into Todo (description, complete) values ('C', false);
+insert into Todo (description, complete) values ('something', false);
+insert into Todo (description, complete) values ('another thing', false);

@@ -14,7 +14,7 @@
 
 Frank Chen <chenhm@gmail.com>
 
-这是关于spring核心功能的小指南，方便快速理解spring
+这是关于spring核心功能的小指南，方便快速理解spring，样例代码可以在 https://github.com/chenhm/spring-boot 找到
 
 ## spring context
 
@@ -242,7 +242,7 @@ public Object AroundLog(ProceedingJoinPoint jp, AroundLog aroundLog <2>
 ----
 <1> 匹配带有annotation的方法
 <2> 方法上的annotation类型是AroundLog
-<3> 原始方法
+<3> 调用原方法
 
 .Call example
 [source,java]
@@ -276,14 +276,76 @@ public class TodoController$$FastClassBySpringCGLIB$$18a9e4f3 {
 }
 ----
 
+
 ## spring mvc
 
-TODO
+早期Spring MVC是通过返回`ModelAndView`对象实现model和view的绑定。
+[source,java]
+----
+@RequestMapping(value = "todo.html", produces = MediaType.TEXT_HTML_VALUE )
+public ModelAndView todo_html(){
+    return new ModelAndView("todo").addObject("todoList", todoRepository.findAll());
+}
+----
+至于渲染层则可以通过xml配置灵活替换。
+[source,xml]
+----
+<!-- freemarker config -->
+<bean id="freemarkerConfig" class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+    <property name="templateLoaderPath" value="/WEB-INF/freemarker/"/>
+</bean>
+
+<!--
+View resolvers can also be configured with ResourceBundles or XML files. If you need
+different view resolving based on Locale, you have to use the resource bundle resolver.
+-->
+<bean id="viewResolver" class="org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver">
+    <property name="cache" value="true"/>
+    <property name="prefix" value=""/>
+    <property name="suffix" value=".ftl"/>
+</bean>
+----
+
+现在后端更加服务化，通常只返回rest接口数据，我们可以使用`@RestController`类似2.3节的代码创建rest服务，spring会自动将Bean映射为json或xml。
+
+## spring websocket
+
+Spring WebSocket提供了STOMP over WebSocket的能力，这使我们可以方便的开发一些简单的实时交互应用。
+
+首先，启用STOMP over WebSocket：
+[source,java]
+----
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketStompConfig extends AbstractWebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").withSockJS(); <1>
+    }
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/queue", "/topic");  <2>
+        registry.setApplicationDestinationPrefixes("/app"); <3>
+    }
+}
+----
+<1> 注册WebSocket的endpoint，这里使用SockJS的通讯协议，这样当浏览器不支持WebSocket时可以fallback到Ajax/XHR或long polling
+
+详细用法请参考`UpdateAspect`类和前端js脚本。
 
 ## spring tx
 
-TODO
+Spring的声明式事务是Spring中最精彩的部分，
 
 ## spring boot
 
-TODO
+通过上面Spring核心功能的介绍，我们可以发现Spring整体的配置是比较多的，即使用了注解
+http://start.spring.io/
+
+[appendix]
+## Code Description
+
+UpdateAspect无法捕捉到数据的更新操作，因为CrudRepository更新数据的流程是先根据主键调用findOne找到当前Bean，对Bean设值，然后save。显然在save之前缓存已经更新了，所以通过拦截save方法无法获得数据的变化。
+

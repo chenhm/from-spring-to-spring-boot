@@ -15,6 +15,7 @@
         <!--</encoder>-->
     <!--</appender>-->
 
+    <logger name="org.hibernate" level="info" />
     <logger name="org.eclipse.jetty" level="info" />
     <logger name="org.springframework.core.type" level="info" />
     <logger name="org.springframework" level="info" />

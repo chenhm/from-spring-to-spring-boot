@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" charset="utf-8" href="base.css"/>
+    <script src="//cdn.jsdelivr.net/sockjs/1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fast-json-patch/1.0.0/json-patch.min.js"></script>
+    <script src="main.js"></script>
+</head>
+<body>
+
+<section class="todo-app">
+    <form class="create-todo" onsubmit="create();return false">
+        <button type="button" class="toggle complete-all" onclick="completeAll"></button>
+        <input type="text" name="description" placeholder="Add a todo" autofocus/>
+        <input name="complete" type="checkbox" disabled style="display: none"/>
+        <fieldset>
+            <button type="submit">&#65291;</button>
+        </fieldset>
+    </form>
+    <ul class="todo-list">
+
+    </ul>
+</section>
+</body>
+</html>

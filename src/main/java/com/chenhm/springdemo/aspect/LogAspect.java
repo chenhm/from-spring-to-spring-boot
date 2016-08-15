@@ -25,16 +25,16 @@ public class LogAspect {
     }
 
     @Around("@annotation(aroundLog)")
-    public Object AroundLogMethod(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
-        return AroundLog(jp, aroundLog);
+    public Object aroundLogMethod(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
+        return aroundLog(jp, aroundLog);
     }
 
     @Around("within(@AroundLog *) && @target(aroundLog)")
-    public Object AroundLogClass(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
-        return AroundLog(jp, aroundLog);
+    public Object aroundLogClass(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
+        return aroundLog(jp, aroundLog);
     }
 
-    public Object AroundLog(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
+    public Object aroundLog(ProceedingJoinPoint jp, AroundLog aroundLog) throws Throwable {
         try {
             log(logger, aroundLog.level(), "start " + jp );
             return jp.proceed();
