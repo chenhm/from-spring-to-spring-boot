@@ -208,8 +208,8 @@ public class LogAspect {
     }
 }
 ----
-<1> 使用`@Aspect`注解标记切面类
-<2> `@Component`使spring在容器内创建该类，也可通过xml配置让spring感知此类
+<1> 使用 `@Aspect` 注解标记切面类
+<2> `@Component` 使spring在容器内创建该类，也可通过xml配置让spring感知此类
 <3> Pointcut声明，注意参数需要用args标记
 <4> JoinPoint可以获得当前方法和参数信息
 
@@ -279,7 +279,7 @@ public class TodoController$$FastClassBySpringCGLIB$$18a9e4f3 {
 
 ## spring mvc
 
-早期Spring MVC是通过返回`ModelAndView`对象实现model和view的绑定。
+早期Spring MVC是通过返回 `ModelAndView` 对象实现model和view的绑定。
 [source,java]
 ----
 @RequestMapping(value = "todo.html", produces = MediaType.TEXT_HTML_VALUE )
@@ -306,7 +306,7 @@ different view resolving based on Locale, you have to use the resource bundle re
 </bean>
 ----
 
-现在后端更加服务化，通常只返回rest接口数据，我们可以使用`@RestController`类似2.3节的代码创建rest服务，spring会自动将Bean映射为json或xml。
+现在后端更加服务化，通常只返回rest接口数据，我们可以使用 `@RestController` 类似2.3节的代码创建rest服务，spring会自动将Bean映射为json或xml。
 
 ## spring websocket
 
@@ -332,7 +332,7 @@ public class WebSocketStompConfig extends AbstractWebSocketMessageBrokerConfigur
 }
 ----
 <1> 注册WebSocket的endpoint，这里同时使用SockJS的通讯协议，当浏览器不支持WebSocket时可以fallback到Ajax/XHR或long polling。
-<2> Stomp并不真的提供`queue`或`topic`，它使用`SEND`和`SUBSCRIBE`语义操作“destination”，这里的`"/queue", "/topic"`都是destination前缀。参考 http://stomp.github.io/stomp-specification-1.2.html[Stomp specification]
+<2> Stomp并不真的提供 `queue` 或 `topic` ，它使用 `SEND` 和 `SUBSCRIBE` 语义操作“destination”，这里的 `"/queue", "/topic"` 都是destination前缀。参考 http://stomp.github.io/stomp-specification-1.2.html[Stomp specification]
 <3> 应用初始化消息的前缀。
 
 然后我们发送应用的初始化数据：
@@ -343,7 +343,7 @@ public Iterable<Todo> findAll(){
     return todoRepository.findAll();
 }
 ----
-<1> 标记findAll响应Subscribe消息，当客户端Subscribe `"/app/todoes"`时，客户端会收到findAll的结果。
+<1> 标记findAll响应Subscribe消息，当客户端Subscribe `"/app/todoes"` 时，客户端会收到findAll的结果。
 
 最后在"topic"上发送增量数据实现实时响应
 [source,java]
@@ -367,7 +367,7 @@ public Object publishChange(ProceedingJoinPoint jp, CrudRepository repository) t
 <3> 获取方法执行后的数据
 <4> 发送patch数据
 
-详细用法请参考`UpdateAspect`类和前端js脚本。
+详细用法请参考 `UpdateAspect` 类和前端js脚本。
 
 ## spring tx
 
@@ -395,9 +395,13 @@ D -> Connection: getConnection
 activate Connection
 Connection -> Connection: exectue
 Connection --> D: releaseConnection
+deactivate Connection
 D --> C: unbindResource
+deactivate D
 C --> B: doCommit
+deactivate C
 B --> A: cleanupTransactionInfo
+deactivate B
 ----
 
 ## spring boot
