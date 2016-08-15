@@ -20,11 +20,11 @@ function updateMsg(message) {
 function showData(){
     var ul = document.querySelector('ul')
     ul.innerHTML = '';
-    todoes.forEach(e => {
+    todoes.forEach(el => {
         ul.appendChild(document.createElement("li")).outerHTML = `<li data-list class="todo-item">
-                <input type="hidden" name="id" value="${e.id}"/>
-                <input class="toggle" type="checkbox" name="complete" value="${e.complete}"/>
-                <input type="text" name="description" value="${e.description}"/>
+                <input type="hidden" name="id" value="${el.id}"/>
+                <input class="toggle" type="checkbox" name="complete" value="${el.complete}"/>
+                <input type="text" name="description" value="${el.description}" readonly="readonly"/>
                 <span class="remove" onclick="deleteById(this)">&times;</span>
             </li>`
     })

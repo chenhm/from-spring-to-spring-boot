@@ -14,7 +14,7 @@
 
 Frank Chen <chenhm@gmail.com>
 
-这是关于spring核心功能的小指南，方便快速理解spring，样例代码可以在 https://github.com/chenhm/spring-boot 找到
+这是关于spring核心功能的小指南，方便快速理解spring，样例代码可以在 https://github.com/chenhm/spring-boot-demo 找到
 
 ## spring context
 
@@ -331,17 +331,79 @@ public class WebSocketStompConfig extends AbstractWebSocketMessageBrokerConfigur
     }
 }
 ----
-<1> 注册WebSocket的endpoint，这里使用SockJS的通讯协议，这样当浏览器不支持WebSocket时可以fallback到Ajax/XHR或long polling
+<1> 注册WebSocket的endpoint，这里同时使用SockJS的通讯协议，当浏览器不支持WebSocket时可以fallback到Ajax/XHR或long polling。
+<2> Stomp并不真的提供`queue`或`topic`，它使用`SEND`和`SUBSCRIBE`语义操作“destination”，这里的`"/queue", "/topic"`都是destination前缀。参考 http://stomp.github.io/stomp-specification-1.2.html[Stomp specification]
+<3> 应用初始化消息的前缀。
+
+然后我们发送应用的初始化数据：
+[source,java]
+----
+@SubscribeMapping("/todoes")  <1>
+public Iterable<Todo> findAll(){
+    return todoRepository.findAll();
+}
+----
+<1> 标记findAll响应Subscribe消息，当客户端Subscribe `"/app/todoes"`时，客户端会收到findAll的结果。
+
+最后在"topic"上发送增量数据实现实时响应
+[source,java]
+----
+@Around("(execution(* save(..)) || execution(* delete(..))) && target(repository)") <1>
+public Object publishChange(ProceedingJoinPoint jp, CrudRepository repository) throws Throwable {
+    logger.info("publishChange " + jp);
+    List original = Lists.newArrayList(repository.findAll()); <2>
+    Object ret = jp.proceed();
+    List updated = Lists.newArrayList(repository.findAll());  <3>
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode patchNode = JsonDiff.asJson(mapper.valueToTree(original), mapper.valueToTree(updated));
+
+    messaging.convertAndSend("/topic/todoes", patchNode);  <4>
+    return ret;
+}
+----
+<1> 拦截Repository的save和delete方法
+<2> 获取方法执行前的数据
+<3> 获取方法执行后的数据
+<4> 发送patch数据
 
 详细用法请参考`UpdateAspect`类和前端js脚本。
 
 ## spring tx
 
-Spring的声明式事务是Spring中最精彩的部分，
+Spring的声明式事务是Spring中最精彩的部分，它充分利用了Spring的容器、AOP和Servlet同步模型。JdbcTemplate是Spring直接操作jdbc的工具类，我们可以从该类入手观察整个Spring事务时如何工作的。追踪代码，获得大致流程如下：
+
+1. TransactionAspectSupport 完成切面拦截，事务从这里开始。
+2. 根据事务配置，Spring会返回对应的PlatformTransactionManager，例如原生jdbc就是DataSourceTransactionManager。
+3. TransactionManager开始工作前利用TransactionSynchronizationManager将所需资源绑定到当前线程。由于Servlet 3.0之前都是同步的，一次请求中的方法都是在同一线程中执行，TransactionSynchronizationManager大大简化了方法调用之间的参数传递。
+4. DataSourceUtils调用TransactionSynchronizationManager中绑定的资源获取Connection。
+5. 在Connection完成操作后，TransactionManager根据执行情况commit或rollback。
+
+[plantuml, spring-tx, png]
+----
+participant "TransactionAspectSupport" as A
+participant "PlatformTransactionManager\n(DataSourceTransactionManager)" as B
+participant "TransactionSynchronizationManager" as C
+participant "DataSourceUtils" as D
+A -> B: invokeWithinTransaction
+activate B
+B -> C: doBegin
+activate C
+C -> D: bindResource
+activate D
+D -> Connection: getConnection
+activate Connection
+Connection -> Connection: exectue
+Connection --> D: releaseConnection
+D --> C: unbindResource
+C --> B: doCommit
+B --> A: cleanupTransactionInfo
+----
 
 ## spring boot
 
-通过上面Spring核心功能的介绍，我们可以发现Spring整体的配置是比较多的，即使用了注解
+我们可以发现Spring整体的配置是比较多的，即使用了注解仍有许多配置项，而一些常见项目与Spring的集成配置基本是通用的，于是Spring开发了Spring Boot项目。
+
 http://start.spring.io/
 
 [appendix]
