@@ -367,6 +367,10 @@ public Object publishChange(ProceedingJoinPoint jp, CrudRepository repository) t
 <3> 获取方法执行后的数据
 <4> 发送patch数据
 
+NOTE: UpdateAspect无法捕捉到数据的更新操作，因为CrudRepository更新数据的流程是先根据主键调用findOne找到当前Bean，对Bean设值，然后save。显然在save之前缓存已经更新了，所以通过拦截save方法无法获得数据的变化。
+
+TIP: 如果使用表达式 `@Around("target(repository)")` 是否会导致 `findAll()` 被切面拦截或递归拦截？
+
 详细用法请参考 `UpdateAspect` 类和前端js脚本。
 
 ## spring tx
@@ -406,12 +410,102 @@ deactivate B
 
 ## spring boot
 
-我们可以发现Spring整体的配置是比较多的，即使用了注解仍有许多配置项，而一些常见项目与Spring的集成配置基本是通用的，于是Spring开发了Spring Boot项目。
+由于Spring整体的配置较多，即使用注解仍有许多配置项，而一些常见项目与Spring的集成配置基本是通用的，于是Spring将这些项目预集成，通过检测classpath中是否有对应的类来开启配置，这就是Spring Boot项目。在 http://start.spring.io/ 可以通过勾选项目特性快速生成自己的项目配置，当然也可以在pom手动加入依赖：
 
-http://start.spring.io/
+[source,xml]
+----
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.3.7.RELEASE</version>
+    <relativePath/> <!-- lookup parent from repository -->
+</parent>
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-jetty</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <exclusions>
+            <exclusion>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-tomcat</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-websocket</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-freemarker</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-rest</artifactId>
+    </dependency>
+</dependencies>
+----
+- spring-boot-starter: 引入Spring core，并实现spring boot的自动配置。
+- spring-boot-starter-web: 启用Spring webmvc，并通过spring-boot-starter-tomcat内嵌tomcat。
+- spring-boot-starter-jetty: 使用内嵌的Jetty。
+- spring-boot-starter-websocket: 跟Jetty,Tomcat,Undertow,WebLogic,WebSphere等常见容器的WebSocket适配器。
+- spring-boot-starter-freemarker: 跟Freemarker的集成。
+- spring-boot-starter-data-jpa: 启用JPA，通过Hibernate实现。
+- spring-boot-starter-data-rest: 启用spring-data-rest-webmvc，实现Data model到rest接口的自动暴露。
+- spring-boot-starter-jdbc: 启用原生jdbc。
+
+预定义配置自然不能完全满足我们的要求，Spring boot使用 `application.properties` 作为全局配置文件，默认配置值可以在 http://docs.spring.io/spring-boot/docs/current/reference/html/common-application-properties.html 找到。
+
+Spring Boot还可以利用maven插件将项目打包成standalone jar文件，boot的Launcher会自动查找项目内含有main方法的class，然后执行。
 
 [appendix]
 ## Code Description
 
-UpdateAspect无法捕捉到数据的更新操作，因为CrudRepository更新数据的流程是先根据主键调用findOne找到当前Bean，对Bean设值，然后save。显然在save之前缓存已经更新了，所以通过拦截save方法无法获得数据的变化。
+- AppBoot.java
++
+项目入口
+
+- LogAspect.java
++
+日志切面例子，含before advice和around advice，还有针对方法和类的不同pointcut
+
+- UpdateAspect.java
++
+利用切面获取数据更新状态，然后使用WebSocket发送差异数据
+
+- DatabaseConfig.java
++
+数据源配置
+
+- WebSocketStompConfig.java
++
+WebSocket配置
+
+- TodoController.java
++
+Spring webmvc和websocket的Controller例子
+
+- resources/public
++
+Spring boot默认的静态文件目录
+
+- resouces/templates
++
+Spring boot默认的template文件目录，例子用的Freemarker
+
+运行方法：
+直接执行AppBoot或 `mvn package` 后用 `java -jar` 执行生成的jar包。
+
 
