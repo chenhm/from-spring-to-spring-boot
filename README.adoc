@@ -14,7 +14,7 @@
 
 Frank Chen <chenhm@gmail.com>
 
-这是关于spring核心功能的小指南，方便快速理解spring，样例代码可以在 https://github.com/chenhm/spring-boot-demo 找到
+这是关于spring核心功能的小指南，方便快速理解spring，需要有一点Spring使用基础，样例代码可以在 https://github.com/chenhm/from-spring-to-spring-boot 找到。
 
 ## spring context
 
@@ -383,7 +383,7 @@ Spring的声明式事务是Spring中最精彩的部分，它充分利用了Sprin
 4. DataSourceUtils调用TransactionSynchronizationManager中绑定的资源获取Connection。
 5. 在Connection完成操作后，TransactionManager根据执行情况commit或rollback。
 
-[plantuml, spring-tx, png]
+[plantuml, spring-tx, png, width="100%"]
 ----
 participant "TransactionAspectSupport" as A
 participant "PlatformTransactionManager\n(DataSourceTransactionManager)" as B
@@ -508,4 +508,8 @@ Spring boot默认的template文件目录，例子用的Freemarker
 运行方法：
 直接执行AppBoot或 `mvn package` 后用 `java -jar` 执行生成的jar包。
 
+http://127.0.0.1:8080/ 是个todo list的例子（需要最新版的Chrome或Firefox），可以添加删除内容，如果开多个浏览器，数据会在多个窗口同步。
 
+http://127.0.0.1:8080/profile/todoes 是alps格式的API描述
+
+http://127.0.0.1:8080/browser/index.html#/todoes 是data rest接口的UI
