@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.util.List;
+
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
+
 /**
  * Created by Frank on 8/13/2016.
  */
@@ -20,23 +24,28 @@ public class TodoController {
     @Autowired
     TodoRepository todoRepository;
 
-    @RequestMapping(value = "todoes", produces = MediaType.APPLICATION_JSON_VALUE )
+    @RequestMapping(value = "todoes", method = GET, produces = MediaType.APPLICATION_JSON_VALUE )
     @SubscribeMapping("/todoes")
     public Iterable<Todo> findAll(){
         return todoRepository.findAll();
     }
 
     @AroundLog
-    @RequestMapping(value = "todoes/{id}", produces = MediaType.APPLICATION_JSON_VALUE )
+    @RequestMapping(value = "todoes/{id}", method = GET, produces = MediaType.APPLICATION_JSON_VALUE )
     public Todo findOne(@PathVariable Long id){
         return todoRepository.findOne(id);
+    }
+
+    @RequestMapping(value = "todofind/{id}", method = GET, produces = MediaType.APPLICATION_JSON_VALUE )
+    public List<Todo> find(@PathVariable Boolean id){
+        return todoRepository.findByComplete(id);
     }
 
     /**
      * a example using {@link ModelAndView }
      * @return
      */
-    @RequestMapping(value = "todo.html", produces = MediaType.TEXT_HTML_VALUE )
+    @RequestMapping(value = "todo.html",  method = GET, produces = MediaType.TEXT_HTML_VALUE )
     public ModelAndView todo_html(){
         return new ModelAndView("todo").addObject("todoList", todoRepository.findAll());
     }

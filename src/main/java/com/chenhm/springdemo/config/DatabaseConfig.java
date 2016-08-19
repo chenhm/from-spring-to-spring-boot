@@ -16,7 +16,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import javax.sql.DataSource;
 
 @Configuration
-@PropertySource({"classpath:application.properties"})
+@PropertySource({"classpath:application.yml"})
 public class DatabaseConfig {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
